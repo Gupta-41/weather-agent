@@ -18,14 +18,9 @@ services:
       - key: ANTHROPIC_MODEL
         value: claude-sonnet-5
       - key: DATABASE_PATH
-        value: /var/data/weather.db
+        value: data/weather.db
       - key: ALERTS_ENABLED
         value: "true"
       - key: ALERT_POLL_MINUTES
         value: "30"
-    disk:
-      # Without a disk, Render's filesystem is wiped on every deploy and saved
-      # locations disappear. 1 GB is the smallest size and far more than enough.
-      name: weathergpt-data
-      mountPath: /var/data
-      sizeGB: 1
+  
