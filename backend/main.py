@@ -26,11 +26,18 @@ Units = Literal["metric", "imperial"]
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.http = httpx.AsyncClient(timeout=15.0)
-    app.state.llm = (
-        anthropic.AsyncAnthropic(api_key=config.ANTHROPIC_API_KEY)
-        if config.ANTHROPIC_API_KEY
-        else None
-    )
+
+    if config.LLM_PROVIDER == "gemini":
+        from google import genai
+
+        app.state.llm = genai.Client(api_key=config.GEMINI_API_KEY) if config.GEMINI_API_KEY else None
+    else:
+        app.state.llm = (
+            anthropic.AsyncAnthropic(api_key=config.ANTHROPIC_API_KEY)
+            if config.ANTHROPIC_API_KEY
+            else None
+        )
+
     app.state.db = db.connect()
     db.init(app.state.db)
 
@@ -94,6 +101,7 @@ async def bad_value(_: Request, exc: ValueError):
 async def health(request: Request):
     return {
         "status": "ok",
+        "llm_provider": config.LLM_PROVIDER,
         "llm_configured": request.app.state.llm is not None,
         "alerts": request.app.state.scheduler.status(),
     }
@@ -264,9 +272,14 @@ class ChatRequest(BaseModel):
 async def chat(req: ChatRequest, request: Request):
     llm = request.app.state.llm
     if llm is None:
-        raise HTTPException(status_code=503, detail="ANTHROPIC_API_KEY is not set")
+        raise HTTPException(status_code=503, detail="No LLM API key is set")
 
-    result = await run_agent(
+    if config.LLM_PROVIDER == "gemini":
+        from backend.agent.gemini_agent import run_agent as run_chat_agent
+    else:
+        from backend.agent.agent import run_agent as run_chat_agent
+
+    result = await run_chat_agent(
         llm=llm,
         http=request.app.state.http,
         message=req.message,
