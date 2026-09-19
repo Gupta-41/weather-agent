@@ -1,0 +1,31 @@
+# Render blueprint for the backend. Create the service from this file, then set
+# ANTHROPIC_API_KEY and CORS_ORIGINS in the dashboard.
+services:
+  - type: web
+    name: weathergpt-api
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12"
+      - key: ANTHROPIC_API_KEY
+        sync: false          # set this in the dashboard, never in the repo
+      - key: CORS_ORIGINS
+        sync: false          # your Vercel URL, e.g. https://weathergpt.vercel.app
+      - key: ANTHROPIC_MODEL
+        value: claude-sonnet-5
+      - key: DATABASE_PATH
+        value: /var/data/weather.db
+      - key: ALERTS_ENABLED
+        value: "true"
+      - key: ALERT_POLL_MINUTES
+        value: "30"
+    disk:
+      # Without a disk, Render's filesystem is wiped on every deploy and saved
+      # locations disappear. 1 GB is the smallest size and far more than enough.
+      name: weathergpt-data
+      mountPath: /var/data
+      sizeGB: 1
