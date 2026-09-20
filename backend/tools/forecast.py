@@ -1,7 +1,7 @@
 import httpx
 
 from backend.tools.geocode import geocode
-from backend.tools.openmeteo import FORECAST_URL, location_summary
+from backend.tools.openmeteo import FORECAST_URL, get_with_retry, location_summary
 from backend.units import unit_system
 from backend.weather_codes import describe
 
@@ -26,7 +26,8 @@ async def get_forecast(
     days = max(1, min(int(days), MAX_DAYS))
     loc = await geocode(client, location)
 
-    resp = await client.get(
+    resp = await get_with_retry(
+        client,
         FORECAST_URL,
         params={
             "latitude": loc["latitude"],
@@ -37,7 +38,6 @@ async def get_forecast(
             **system["api"],
         },
     )
-    resp.raise_for_status()
     daily = resp.json()["daily"]
 
     def at(field: str, i: int):

@@ -1,6 +1,6 @@
 import httpx
 
-from backend.tools.openmeteo import GEOCODE_URL
+from backend.tools.openmeteo import GEOCODE_URL, get_with_retry
 
 
 class LocationNotFound(Exception):
@@ -29,7 +29,8 @@ async def geocode(client: httpx.AsyncClient, location: str) -> dict:
     name, _, hint = location.partition(",")
     name, hint = name.strip(), hint.strip().lower()
 
-    resp = await client.get(
+    resp = await get_with_retry(
+        client,
         GEOCODE_URL,
         params={
             "name": name,
@@ -38,7 +39,6 @@ async def geocode(client: httpx.AsyncClient, location: str) -> dict:
             "format": "json",
         },
     )
-    resp.raise_for_status()
     results = resp.json().get("results") or []
     if not results:
         raise LocationNotFound(f"No location found for '{location}'")

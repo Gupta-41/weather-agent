@@ -14,7 +14,7 @@ from datetime import date, datetime
 import httpx
 
 from backend.tools.geocode import geocode
-from backend.tools.openmeteo import ARCHIVE_URL, location_summary
+from backend.tools.openmeteo import ARCHIVE_URL, get_with_retry, location_summary
 from backend.units import unit_system
 from backend.weather_codes import describe
 
@@ -76,7 +76,8 @@ def _trend_per_decade(years: list[int], values: list[float]):
 async def _fetch_archive(
     client: httpx.AsyncClient, loc: dict, start: date, end: date, system: dict
 ) -> dict:
-    resp = await client.get(
+    resp = await get_with_retry(
+        client,
         ARCHIVE_URL,
         params={
             "latitude": loc["latitude"],
@@ -88,7 +89,6 @@ async def _fetch_archive(
             **system["api"],
         },
     )
-    resp.raise_for_status()
     return resp.json()["daily"]
 
 
